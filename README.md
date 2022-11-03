@@ -3,7 +3,7 @@ Path Integral Monte Carlo Code for VSC
 
 
 
-###Written by
+### Written by
 * Jaime de la Fuente
 * Riccardo Spezia
 * Rodolphe Vuilleumier
