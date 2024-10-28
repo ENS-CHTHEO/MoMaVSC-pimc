@@ -119,7 +119,7 @@
 						#########module load gcc
 
 
-						mycode=/home/jdelafuentediez/momavsc-harm/bin/code.exe
+						mycode=/home/jdelafuentediez/momavsc-harm/bin/code.exe #Route for where your compiled code is stored
 						time \$mycode < input.in > output.$nosc.data
 
 
