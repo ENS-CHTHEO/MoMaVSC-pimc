@@ -1,7 +1,7 @@
 # MoMaVSC-pimc
 Path Integral Monte Carlo Code for VSC
 
-<img src="foto_pimc.png" width="500"/>
+<img src="foto_pimc.png" width="400"/>
 
 
 
