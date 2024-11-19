@@ -6,27 +6,40 @@
 ##	module load munge
 
 	#Montecarlo parameters.
-	n_runs=50
-	ncycles=10000000
+	n_runs=25
+	ncycles=100000000
 
 	#Offresonance parameters.
 	step=200
 	max_offres=000
-	cav_freq=1794
-	osc_freq=1794
+	cav_freq=1700
 
 	
 	#System parameters. This script supports the generation of two peaks instead of one. 
+	osc_freq=3400
 	nbeads=1
-	rabi_target=0 # The two peaks couple in such a way that, if both were resonant to the cavity the split were to be
+	rabi_target=750 # The two peaks couple in such a way that, if both were resonant to the cavity the split were to be
+	#This is width for both peaks
 	start_gauss=0
-	gauss_step=100
+	gauss_step=10
 	final_gauss=0
-	osc_freq_2=1671 # frequency of the second peak
+
+	# Parameters for 2 peak systems generated in automatic
+	twopeak_auto='true' # if it is set to false, then you can write anything for osc_freq_2 and rabi_target_2
+	rabi_target_2=250 # The two peaks couple in such a way that, if both were resonant to the cavity the split were to be
+	osc_freq_2=1700 # frequency of the second peak
 	partition_size=0.5 # how do we split the modes between peaks. 0.5 indicates 50% partition. 0.2 indicates second peak is 20% and first is 80%
 
-	#Gaussian generation controls.
+
+	# If you just want to load a freq distribution, with whatever shape, set this flag to false:	
 	generate_random='true'
+
+	if [[ "$twopeak_auto" == "false" ]]; then
+		partition_size=0 # how do we split the modes between peaks. 0.5 indicates 50% partition. 0.2 indicates second peak is 20% and first is 80%
+    		osc_freq_2="$osc_freq"
+    		rabi_target_2="$rabi_target"
+	fi
+	#Gaussian generation controls.
 	upcut=0.25 #With respect to half rabi, dist from P+  to center line to bound the gaussian and cut the tails.
 	lowcut=0.25
 
@@ -39,6 +52,7 @@
 	start_dir=`pwd`
 	if [ $generate_random == 'true' ]
 	then
+
 		rm -rf saved_gaussians
 		mkdir saved_gaussians
 	fi
@@ -67,13 +81,23 @@
 
 
 			#Set individual coupling
-			coup=`awk -v sqr_n=$nosc_1 -v omeg_t=$rabi_target 'BEGIN {print omeg_t/sqrt(sqr_n)}'` #Static gamma
+			coup=`awk -v sqr_n=$nosc_1 -v omeg_t=$rabi_target -v w_c=$w_cav -v w_o=$osc_freq 'BEGIN {print (w_c/w_o)^(3/2)*omeg_t/sqrt(sqr_n-1)}'` # We remove the cav dof!
+			coup_2=`awk -v sqr_n=$nosc_2 -v omeg_t=$rabi_target_2 -v w_c=$w_cav -v w_o=$osc_freq_2 'BEGIN {print (w_c/w_o)^(3/2)*omeg_t/sqrt(sqr_n)}'` 
 			# coup=`awk -v sqr_n=$nosc -v w_c=$w_cav -v w_o=$osc_freq -v omeg_t=$rabi_target 'BEGIN {print (w_c/w_o)^(3/2)*(omeg_t/sqr_n)}'` #Dynamic gamma for the off resonance
 
-		
 			mkdir nosc_$nosc
 			cd nosc_$nosc
 
+			rm couplings_list.data
+			#Create file containing all expected single molecule Rabis for all matter molecules
+			for imat1 in `seq 1 1 "$(($nosc_1-1))"`
+			do
+				echo $coup >> couplings_list.data
+			done
+			for imat2 in `seq 1 1 $nosc_2`
+			do
+				echo $coup_2  >> couplings_list.data
+			done
 
 			for gauss in `seq $start_gauss $gauss_step $final_gauss`
 			do
@@ -87,13 +111,15 @@
 					#Use the generator for the two distributions
 						python3 normal_corrected.py --up_cut=$upcut --low_cut=$lowcut --avg=$osc_freq --desvest=$gauss --nosc=$nosc_1
 						# Now we copy this output into "partial_freq_1.data"
-						mv inp_freqs_"$nosc_1"_"$gauss".data  partial_freq_1.data
+						mv inp_freqs_"$nosc_1"_"$gauss".data partial_freq_1.data
 						python3 normal_corrected.py --up_cut=$upcut_2 --low_cut=$lowcut_2 --avg=$osc_freq_2 --desvest=$gauss --nosc=$nosc_2
 						# Check if the second exists, that is, if the partition size allows to have a second group of size at least 1
-						if [ -s inp_freqs_"$nosc_2"_"$gauss".data ]; then
+						echo "the value of nosc2 is: $nosc_2"
+						if [ "$nosc_2" -gt 0 ]; then
 							cat partial_freq_1.data inp_freqs_"$nosc_2"_"$gauss".data > inp_freqs_"$nosc"_"$gauss".data	
 						else
-							partial_freq_1.data > inp_freqs_"$nosc"_"$gauss".data	
+							rm inp_freqs_"$nosc_2"_"$gauss".data
+							mv partial_freq_1.data inp_freqs_"$nosc"_"$gauss".data	
 						fi
 
 
@@ -118,6 +144,7 @@
 					mkdir run_$run_id
 					cd run_$run_id
 					cp ../starting_freqs.data .
+					cp ../../couplings_list.data .
 					#Generate slurm launcher file
 
 					cat <<-EOF >launcher
@@ -135,7 +162,7 @@
 ###						module load gcc
 
 
-						mycode=/home/jdelafuentediez/momavsc-harm/bin/code.exe
+						mycode=/home/jdelafuentediez/momavsc-harm-multicoup/bin/code.exe
 						time \$mycode < input.in > output.$nosc.data
 
 
