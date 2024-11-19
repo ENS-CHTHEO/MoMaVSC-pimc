@@ -6,6 +6,7 @@
 #	module load slurm #New cluster needs it
 #	module load munge
 
+# CONTROL AREA. MOST THINGS CAN BE DONE WITHOUT DIGGING INTO THE CODE
 	#Montecarlo parameters.
 	n_runs=25
 	ncycles=100000000
@@ -23,7 +24,7 @@
 	start_gauss=11
 	gauss_step=100
 	final_gauss=11
-
+	potential='fh2' # Check readme for the keywords
 	#Gaussian generation controls.
 	generate_random='true'
 	upcut=0.25 #With respect to half rabi, dist from P+  to center line to bound the gaussian and cut the tails.
@@ -128,7 +129,7 @@
 					#Generate input file
 					cat <<-EOF >input.in
 						&seetings
-						model='fh2'
+						model=$potential
 						rabi_split=$coup
 						nosc=$nosc
 						nbeads=$nbeads

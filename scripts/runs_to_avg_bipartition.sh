@@ -20,6 +20,7 @@
 	nbeads=1
 	rabi_target=750 # The two peaks couple in such a way that, if both were resonant to the cavity the split were to be
 	#This is width for both peaks
+	potential='fh2'
 	start_gauss=0
 	gauss_step=10
 	final_gauss=0
@@ -171,7 +172,7 @@
 					#Generate input file
 					cat <<-EOF >input.in
 						&seetings
-						model='fh2'
+						model=$potential
 						rabi_split=$coup
 						nosc=$nosc
 						nbeads=$nbeads
